@@ -30,25 +30,10 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: wrapper
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Download Inter fonts
-        run: ./gradlew downloadFonts --no-daemon
-
-      - name: Generate assets
-        run: ./gradlew generateAssets --no-daemon
-
-      - name: Compile
-        run: ./gradlew compileJava --no-daemon
-
-      - name: Run tests
-        run: ./gradlew test --no-daemon
+          gradle-version: '8.10.2'
 
       - name: Build JAR
-        run: ./gradlew build --no-daemon
+        run: gradle build --no-daemon
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
