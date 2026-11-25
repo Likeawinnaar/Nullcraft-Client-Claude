@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.nullcraft.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "client.gui.hud.HudRenderMixin",
+    "client.render.CameraMixin",
+    "client.network.PacketMixin",
+    "client.player.MovementMixin",
+    "client.inventory.InventoryMixin",
+    "client.world.ChunkMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

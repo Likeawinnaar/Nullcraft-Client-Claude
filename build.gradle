@@ -1,0 +1,125 @@
+plugins {
+    id "fabric-loom" version "1.7.0"
+    id "java"
+}
+
+group = "com.nullcraft.client"
+version = "1.0.0"
+archivesBaseName = "nullcraft-client"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+    maven { url "https://maven.fabricmc.net/" }
+    maven { url "https://jitpack.io" }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:1.21.1"
+    mappings "net.fabricmc:yarn:1.21.1+build.1:v2"
+    modImplementation "net.fabricmc:fabric-loader:0.16.14"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.116.0+1.21.1"
+    modImplementation "com.google.code.gson:gson:2.11.0"
+    modImplementation "org.lwjgl:lwjgl-stb:3.3.4"
+    modImplementation "org.lwjgl:lwjgl:3.3.4"
+    modImplementation "org.lwjgl:lwjgl-glfw:3.3.4"
+    modImplementation "org.lwjgl:lwjgl-opengl:3.3.4"
+
+    include "com.mojang:datafixerupper:7.0.27"
+    include "com.mojang:brigadier:1.2.3"
+    include "com.mojang:authlib:4.4.12"
+    include "org.apache.logging.log4j:log4j-api:2.23.1"
+    include "org.apache.logging.log4j:log4j-core:2.23.1"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.0"
+    testImplementation "org.mockito:mockito-core:5.14.0"
+}
+
+loom {
+    mappings "yarn"
+    accessWidenerPath = file("src/main/resources/nullcraft.accesswidener")
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-parameters"
+}
+
+tasks.named("jar") {
+    manifest {
+        attributes(
+            "Fabric-Mod-ID": "nullcraft",
+            "Fabric-Mod-Version": version,
+            "Fabric-Mod-Name": "NullCraft Client",
+            "Main-Class": "com.nullcraft.client.NullCraftClient",
+            "Implementation-Title": "NullCraft Client",
+            "Implementation-Version": version,
+            "Implementation-Vendor": "NullCraft Team"
+        )
+    }
+    from(sourceSets.main.resources) {
+        include "fabric.mod.json"
+        include "nullcraft.mixins.json"
+        include "assets/**"
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+task downloadFonts(type: Exec) {
+    workingDir project.projectDir
+    commandLine "powershell", "-Command", "
+        \$urls = @(
+            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.ttf',
+            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Medium.ttf',
+            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-SemiBold.ttf',
+            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Bold.ttf'
+        )
+        \$dest = 'src/main/resources/assets/nullcraft/fonts'
+        if (-not (Test-Path \$dest)) { New-Item -ItemType Directory -Path \$dest | Out-Null }
+        foreach (\$url in \$urls) {
+            \$filename = [System.IO.Path]::GetFileName(\$url)
+            \$output = Join-Path \$dest \$filename
+            if (-not (Test-Path \$output)) {
+                Write-Host \"Downloading \$filename...\"
+                Invoke-WebRequest -Uri \$url -OutFile \$output -UseBasicParsing
+            } else {
+                Write-Host \"\$filename already exists, skipping.\"
+            }
+        }
+    "
+}
+
+tasks.named("compileJava").configure {
+    dependsOn downloadFonts
+    dependsOn generateAssets
+}
+
+task generateAssets(type: JavaExec) {
+    mainClass = "com.nullcraft.client.asset.AssetGenerator"
+    classpath = sourceSets.main.runtimeClasspath
+    jvmArgs = ["-Dfabric.mc.dir=" + project.projectDir]
+    doFirst {
+        // Ensure output directories exist
+        file("src/main/resources/assets/nullcraft/textures/icons").mkdirs()
+        file("src/main/resources/assets/nullcraft/textures/gui").mkdirs()
+    }
+}
+
+tasks.named("test") {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+tasks.named("build") {
+    dependsOn "test"
+}

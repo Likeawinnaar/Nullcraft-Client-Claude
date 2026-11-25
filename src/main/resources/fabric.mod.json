@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "nullcraft",
+  "version": "1.0.0",
+  "name": "NullCraft Client",
+  "description": "A premium Minecraft Fabric client modification with professional GUI, comprehensive modules, and advanced customization.",
+  "authors": [
+    "NullCraft Team"
+  ],
+  "contact": {
+    "homepage": "https://github.com/nullcraft/client",
+    "sources": "https://github.com/nullcraft/client",
+    "issues": "https://github.com/nullcraft/client/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/nullcraft/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.nullcraft.client.NullCraftClient"
+    ]
+  },
+  "mixins": [
+    "nullcraft.mixins.json"
+  ],
+  "accessWidener": "nullcraft.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "api": true,
+      "badges": [
+        "client"
+      ],
+      "parent": {
+        "id": "fabric-api",
+        "name": "Fabric API"
+      }
+    }
+  }
+}
