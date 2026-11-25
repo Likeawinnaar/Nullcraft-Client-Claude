@@ -1,5 +1,5 @@
 plugins {
-    id "fabric-loom" version "1.7.0"
+    id "fabric-loom" version "1.7.4"
     id "java"
 }
 
@@ -43,7 +43,6 @@ dependencies {
 }
 
 loom {
-    mappings "yarn"
     accessWidenerPath = file("src/main/resources/nullcraft.accesswidener")
 }
 
@@ -72,54 +71,43 @@ tasks.named("jar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-task downloadFonts(type: Exec) {
-    workingDir project.projectDir
-    commandLine "powershell", "-Command", "
-        \$urls = @(
-            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.ttf',
-            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Medium.ttf',
-            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-SemiBold.ttf',
-            'https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Bold.ttf'
-        )
-        \$dest = 'src/main/resources/assets/nullcraft/fonts'
-        if (-not (Test-Path \$dest)) { New-Item -ItemType Directory -Path \$dest | Out-Null }
-        foreach (\$url in \$urls) {
-            \$filename = [System.IO.Path]::GetFileName(\$url)
-            \$output = Join-Path \$dest \$filename
-            if (-not (Test-Path \$output)) {
-                Write-Host \"Downloading \$filename...\"
-                Invoke-WebRequest -Uri \$url -OutFile \$output -UseBasicParsing
-            } else {
-                Write-Host \"\$filename already exists, skipping.\"
+tasks.register("downloadFonts") {
+    doLast {
+        def dest = file("src/main/resources/assets/nullcraft/fonts")
+        dest.mkdirs()
+        def names = ["Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "Inter-Bold.ttf"]
+        if (names.any { !new File(dest, it).exists() }) {
+            def archive = file("${buildDir}/inter.zip")
+            archive.parentFile.mkdirs()
+            new URL("https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip").withInputStream { input ->
+                archive.withOutputStream { output -> output << input }
+            }
+            copy {
+                from zipTree(archive)
+                include "**/Inter-Regular.ttf", "**/Inter-Medium.ttf", "**/Inter-SemiBold.ttf", "**/Inter-Bold.ttf"
+                eachFile { path = name }
+                includeEmptyDirs = false
+                into dest
+            }
+            if (names.any { !new File(dest, it).exists() }) {
+                throw new GradleException("Required Inter fonts missing from archive")
             }
         }
-    "
-}
-
-tasks.named("compileJava").configure {
-    dependsOn downloadFonts
-    dependsOn generateAssets
-}
-
-task generateAssets(type: JavaExec) {
-    mainClass = "com.nullcraft.client.asset.AssetGenerator"
-    classpath = sourceSets.main.runtimeClasspath
-    jvmArgs = ["-Dfabric.mc.dir=" + project.projectDir]
-    doFirst {
-        // Ensure output directories exist
-        file("src/main/resources/assets/nullcraft/textures/icons").mkdirs()
-        file("src/main/resources/assets/nullcraft/textures/gui").mkdirs()
     }
 }
-
+tasks.register("generateAssets", JavaExec) {
+    dependsOn tasks.named("compileJava")
+    mainClass = "com.nullcraft.client.asset.AssetGenerator"
+    classpath = files(sourceSets.main.output.classesDirs)
+    jvmArgs = ["-Djava.awt.headless=true"]
+}
+tasks.named("processResources") {
+    dependsOn tasks.named("downloadFonts"), tasks.named("generateAssets")
+}
 tasks.named("test") {
     useJUnitPlatform()
     testLogging {
         events "passed", "skipped", "failed"
         exceptionFormat "full"
     }
-}
-
-tasks.named("build") {
-    dependsOn "test"
 }
